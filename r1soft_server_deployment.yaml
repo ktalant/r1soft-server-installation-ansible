@@ -1,0 +1,60 @@
+---
+- name: R1Soft Server Installation
+  hosts: all
+  vars:
+    login1: admin
+    password1: talant@123
+    vol1: /dev/xvdf
+  become: yes
+  become_method: sudo
+ 
+# Step1: Create a repository and install r1soft-server
+  
+  tasks:
+    - name: Copy r1soft.repo file to /etc/yum.repos.d/
+      copy:
+        src: ./r1soft.repo
+        dest: /etc/yum.repos.d/r1soft.repo
+    
+    - name: Install R1Soft Server
+      package:
+        name: serverbackup-enterprise
+        state: present
+
+# Step2: 
+# Before going this step further make sure you have volume for 
+# backup and do not forget to put correct volume name in vars section
+    
+    - name: Make a file xfs filesystem
+      filesystem:
+        fstype: xfs
+        dev: '{{vol1}}'
+   
+    - name: Create a mount point for volume 
+      file:
+        path: /machine_backups
+        state: directory
+
+    - name: Create a mount point in fstab
+      lineinfile:
+        path: /etc/fstab
+        line: '{{vol1}}  /machine_backups  xfs   defaults  0 0'
+
+    - name: mount the volume
+      shell: 'mount -av'
+
+# Step3: Setup r1soft  username, password, and restart, you can set your login and passord at 
+# vars section
+    - name: r1soft username, password, port setup
+      shell: 'r1soft-setup --user '{{login1}}' --pass '{{password1}}' --http-port 8080'
+
+    - name: restart and enable cdp-server
+      systemd:
+        name: cdp-server
+        state: restarted
+        enabled: yes
+
+
+    
+        
+  
